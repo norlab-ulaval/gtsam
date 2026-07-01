@@ -1061,6 +1061,10 @@ class LeggedFixedLagSmoother : gtsam::LeggedEstimator {
   gtsam::ExtendedPose3d estimate() const;
   gtsam::imuBias::ConstantBias estimateBias() const;
   size_t numFeet() const;
+  gtsam::NonlinearFactorGraph smootherFactors() const;
+  gtsam::Values smootherEstimate() const;
+  size_t currentStep() const;
+  size_t footEpisode(size_t foot) const;
 };
 
 class LeggedCombinedFixedLagSmoother : gtsam::LeggedEstimator {
@@ -1079,5 +1083,22 @@ class LeggedCombinedFixedLagSmoother : gtsam::LeggedEstimator {
   gtsam::ExtendedPose3d estimate() const;
   gtsam::imuBias::ConstantBias estimateBias() const;
   size_t numFeet() const;
+  gtsam::NonlinearFactorGraph smootherFactors() const;
+  gtsam::Values smootherEstimate() const;
+  size_t currentStep() const;
+  size_t footEpisode(size_t foot) const;
+};
+
+#include <gtsam/navigation/LeggedEstimatorFactors.h>
+virtual class NavStatePointContactFactor : gtsam::NoiseModelFactor {
+  NavStatePointContactFactor(size_t navKey, size_t pointKey,
+                             const gtsam::Point3& measurement,
+                             const gtsam::noiseModel::Base* model);
+};
+
+virtual class Pose3PointContactFactor : gtsam::NoiseModelFactor {
+  Pose3PointContactFactor(size_t poseKey, size_t pointKey,
+                          const gtsam::Point3& measurement,
+                          const gtsam::noiseModel::Base* model);
 };
 }

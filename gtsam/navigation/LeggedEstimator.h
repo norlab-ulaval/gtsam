@@ -303,6 +303,20 @@ class GTSAM_EXPORT LeggedFixedLagSmoother : public LeggedEstimator {
   /// Number of feet tracked by the smoother front-end.
   size_t numFeet() const { return numFeet_; }
 
+  /// Current smoother factor graph (IMU, contact, and prior factors) over the
+  /// in-window variables, for leave-one-foothold-out (block-PRESS) analysis.
+  NonlinearFactorGraph smootherFactors() const { return smoother_.getFactors(); }
+
+  /// Current smoother MAP estimate over all in-window variables.
+  Values smootherEstimate() const { return smoother_.calculateEstimate(); }
+
+  /// Event-step counter: the latest base key is `Symbol('x', currentStep())`.
+  size_t currentStep() const { return step_; }
+
+  /// Per-foot contact-episode counter: the active foot landmark key is
+  /// `Symbol('f', 1000 * foot + footEpisode(foot))`.
+  size_t footEpisode(size_t foot) const { return footEpisodes_.at(foot); }
+
   /// Current estimate in the shared `ExtendedPose3d` layout.
   ExtendedPose3d estimate() const override;
 
@@ -386,6 +400,20 @@ class GTSAM_EXPORT LeggedCombinedFixedLagSmoother : public LeggedEstimator {
 
   /// Number of feet tracked by the smoother front-end.
   size_t numFeet() const { return numFeet_; }
+
+  /// Current smoother factor graph (IMU, contact, and prior factors) over the
+  /// in-window variables, for leave-one-foothold-out (block-PRESS) analysis.
+  NonlinearFactorGraph smootherFactors() const { return smoother_.getFactors(); }
+
+  /// Current smoother MAP estimate over all in-window variables.
+  Values smootherEstimate() const { return smoother_.calculateEstimate(); }
+
+  /// Event-step counter: the latest base pose key is `Symbol('x', currentStep())`.
+  size_t currentStep() const { return step_; }
+
+  /// Per-foot contact-episode counter: the active foot landmark key is
+  /// `Symbol('f', 1000 * foot + footEpisode(foot))`.
+  size_t footEpisode(size_t foot) const { return footEpisodes_.at(foot); }
 
   /// Current estimate in the shared `ExtendedPose3d` layout.
   ExtendedPose3d estimate() const override;

@@ -85,7 +85,7 @@ class _LinearizeOneFactor {
 template <typename PoseType>
 WnoaFactorGraph<PoseType>::WnoaFactorGraph(
     std::unordered_map<StateData, std::pair<StateData, StateData>> interp_map,
-    const Eigen::Vector<double, dim> q_psd_diag, bool fixed_noise_model)
+    const typename WnoaFactorGraph<PoseType>::VectorN q_psd_diag, bool fixed_noise_model)
     : interpolator_(q_psd_diag),
       interp_to_borders_map_(std::move(interp_map)),
       fixed_noise_model_(fixed_noise_model) {

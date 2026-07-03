@@ -996,6 +996,7 @@ class LeggedEstimatorParams {
   double biasOmegaRandomWalkSigma;
   bool useFullContactInitialization;
   bool marginalizeLeavingFoot;
+  bool useFootholdRandomWalk;
 };
 
 virtual class LeggedEstimator {

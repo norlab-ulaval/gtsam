@@ -66,6 +66,11 @@ struct LeggedEstimatorParams {
   bool useFullContactInitialization = true;
   /// Replace a leaving foot by a fresh independent prior.
   bool marginalizeLeavingFoot = true;
+  /// Combined smoother only: model each contact event as a new foothold state
+  /// chained to the previous one by a zero-mean random-walk factor with sigma
+  /// footholdProcessSigma * sqrt(dt), so the landmark can drift (slip) during
+  /// stance instead of being a single static point per episode.
+  bool useFootholdRandomWalk = false;
 };
 
 /// Common runtime interface shared by all four legged estimator variants.
@@ -450,6 +455,11 @@ class GTSAM_EXPORT LeggedCombinedFixedLagSmoother : public LeggedEstimator {
   static Key MakeFootKey(size_t foot, size_t episode) {
     return Symbol('f', static_cast<uint64_t>(1000 * foot + episode));
   }
+  /// Per-event foothold key used when useFootholdRandomWalk is enabled: one
+  /// foothold state per (event step, foot), unique because step_ only grows.
+  Key MakeFootStepKey(size_t foot, size_t step) const {
+    return Symbol('f', static_cast<uint64_t>(numFeet_ * step + foot));
+  }
   bool hasPendingImu() const { return pim_.deltaTij() > 0.0; }
   bool graphInitialized() const {
     return !params_.useFullContactInitialization || fullContactInitialized_;
@@ -471,6 +481,7 @@ class GTSAM_EXPORT LeggedCombinedFixedLagSmoother : public LeggedEstimator {
   std::vector<bool> initialized_;
   std::vector<size_t> footEpisodes_;
   std::vector<std::optional<Key>> activeFootKeys_;
+  std::vector<double> lastFootEventTimes_;
   NavState optimizedBaseState_;
   NavState deadReckonedState_;
   imuBias::ConstantBias biasEstimate_;

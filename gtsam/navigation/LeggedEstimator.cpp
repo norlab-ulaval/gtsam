@@ -25,6 +25,7 @@
 #include <gtsam/nonlinear/LevenbergMarquardtOptimizer.h>
 #include <gtsam/nonlinear/Marginals.h>
 #include <gtsam/nonlinear/PriorFactor.h>
+#include <gtsam/slam/BetweenFactor.h>
 
 #include <Eigen/Eigenvalues>
 #include <algorithm>
@@ -1015,6 +1016,7 @@ LeggedCombinedFixedLagSmoother::LeggedCombinedFixedLagSmoother(
       initialized_(numFeet_, false),
       footEpisodes_(numFeet_, 0),
       activeFootKeys_(numFeet_),
+      lastFootEventTimes_(numFeet_, 0.0),
       optimizedBaseState_(navState0),
       deadReckonedState_(navState0),
       biasEstimate_(params.imuBias) {
@@ -1170,7 +1172,9 @@ void LeggedCombinedFixedLagSmoother::processContacts(
       // key.
       ++footEpisodes_[contact.foot];
       const Key footKey =
-          MakeFootKey(contact.foot, footEpisodes_[contact.foot]);
+          params_.useFootholdRandomWalk
+              ? MakeFootStepKey(contact.foot, step_)
+              : MakeFootKey(contact.foot, footEpisodes_[contact.foot]);
       activeFootKeys_[contact.foot] = footKey;
       initialized_[contact.foot] = true;
       const Point3 foothold = footholdFromMeasurement(
@@ -1180,6 +1184,24 @@ void LeggedCombinedFixedLagSmoother::processContacts(
       // filter variants' foot-block replacement.
       factors.emplace_shared<PriorFactor<Point3>>(
           footKey, foothold, Isotropic::Sigma(3, params_.footholdInitSigma));
+    } else if (params_.useFootholdRandomWalk) {
+      // Slip-aware foothold: continue the stance with a fresh foothold state
+      // chained to the previous one by a zero-mean random-walk factor, so the
+      // landmark can drift between contact events instead of staying static.
+      const Key previousFootKey = *activeFootKeys_[contact.foot];
+      const Key footKey = MakeFootStepKey(contact.foot, step_);
+      if (footKey != previousFootKey) {
+        const double footDt =
+            std::max(currentTime_ - lastFootEventTimes_[contact.foot], 1e-6);
+        values.insert(footKey,
+                      footholdFromMeasurement(params_.body_P_imu, baseState,
+                                              contact.bodyPoint));
+        factors.emplace_shared<BetweenFactor<Point3>>(
+            previousFootKey, footKey, Point3(0.0, 0.0, 0.0),
+            Isotropic::Sigma(3, params_.footholdProcessSigma *
+                                    std::sqrt(footDt)));
+        activeFootKeys_[contact.foot] = footKey;
+      }
     }
 
     // Tie the current pose estimate to the active foot episode through a
@@ -1199,6 +1221,7 @@ void LeggedCombinedFixedLagSmoother::processContacts(
     // window.
     timestamps[footKey] = currentTime_;
     inContact_[contact.foot] = true;
+    lastFootEventTimes_[contact.foot] = currentTime_;
   }
 
   smoother_.update(factors, values, timestamps);
@@ -1253,6 +1276,7 @@ bool LeggedCombinedFixedLagSmoother::maybeInitializeFromFullContact(
   activeFootKeys_.assign(numFeet_, std::nullopt);
   inContact_.assign(numFeet_, false);
   initialized_.assign(numFeet_, false);
+  lastFootEventTimes_.assign(numFeet_, 0.0);
 
   NonlinearFactorGraph factors;
   Values values;
@@ -1280,7 +1304,10 @@ bool LeggedCombinedFixedLagSmoother::maybeInitializeFromFullContact(
 
   for (const ContactMeasurement& contact : activeContacts) {
     ++footEpisodes_[contact.foot];
-    const Key footKey = MakeFootKey(contact.foot, footEpisodes_[contact.foot]);
+    const Key footKey =
+        params_.useFootholdRandomWalk
+            ? MakeFootStepKey(contact.foot, step_)
+            : MakeFootKey(contact.foot, footEpisodes_[contact.foot]);
     activeFootKeys_[contact.foot] = footKey;
     const Point3 foothold =
         initializedFootholds.col(static_cast<Eigen::Index>(contact.foot));

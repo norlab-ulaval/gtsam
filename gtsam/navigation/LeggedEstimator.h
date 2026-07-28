@@ -41,6 +41,11 @@ struct ContactMeasurement {
   Vector3 bodyPoint = Vector3::Zero();
   /// True when this measurement corresponds to a new swing-to-stance touchdown.
   bool touchdown = false;
+  /// When true, this contact factor uses `covarianceOverride` instead of
+  /// `LeggedEstimatorParams::contactCovariance` (e.g. a caller-supplied,
+  /// slip-risk-scaled uncertainty for this specific foot/episode).
+  bool useCovarianceOverride = false;
+  Matrix3 covarianceOverride = Matrix3::Identity();
 };
 
 /// Common estimator parameters shared by all four variants.

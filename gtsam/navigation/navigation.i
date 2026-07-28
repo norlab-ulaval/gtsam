@@ -979,6 +979,8 @@ class ContactMeasurement {
   size_t foot;
   gtsam::Vector3 bodyPoint;
   bool touchdown;
+  bool useCovarianceOverride;
+  gtsam::Matrix3 covarianceOverride;
 };
 
 class LeggedEstimatorParams {
@@ -1101,5 +1103,11 @@ virtual class Pose3PointContactFactor : gtsam::NoiseModelFactor {
   Pose3PointContactFactor(size_t poseKey, size_t pointKey,
                           const gtsam::Point3& measurement,
                           const gtsam::noiseModel::Base* model);
+};
+
+virtual class Pose3PointWorldContactFactor : gtsam::NoiseModelFactor {
+  Pose3PointWorldContactFactor(size_t poseKey, size_t pointKey,
+                               const gtsam::Point3& measurement,
+                               const gtsam::noiseModel::Base* model);
 };
 }

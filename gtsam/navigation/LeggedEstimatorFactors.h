@@ -205,6 +205,47 @@ class Pose3PointContactFactor : public NoiseModelFactorN<Pose3, Point3> {
   Point3 measurement_;
 };
 
+/**
+ * World-frame contact factor between a Pose3 and a foothold point variable.
+ *
+ * Unlike Pose3PointContactFactor (body-frame residual), the error is
+ * expressed in the world frame, e = R·s + t − L, so a noise model given in
+ * the base frame whitens the world-frame error as-is. This matches the
+ * python CustomFactor it replaces in foothold_perception's fgo_custom.py.
+ */
+class Pose3PointWorldContactFactor : public NoiseModelFactorN<Pose3, Point3> {
+  using Base = NoiseModelFactorN<Pose3, Point3>;
+
+ public:
+  using Base::evaluateError;
+
+  /// Construct from a Pose3 key, foothold key, and base-frame measurement.
+  Pose3PointWorldContactFactor(Key poseKey, Key pointKey,
+                               const Point3& measurement,
+                               const SharedNoiseModel& model)
+      : Base(model, poseKey, pointKey), measurement_(measurement) {}
+
+  /// Return a deep copy.
+  NonlinearFactor::shared_ptr clone() const override {
+    return std::static_pointer_cast<NonlinearFactor>(
+        NonlinearFactor::shared_ptr(new Pose3PointWorldContactFactor(*this)));
+  }
+
+  /// Evaluate the world-frame contact residual e = R·s + t − L.
+  Vector evaluateError(const Pose3& pose, const Point3& foothold,
+                       OptionalMatrixType H1,
+                       OptionalMatrixType H2) const override {
+    const Point3 prediction = pose.transformFrom(measurement_, H1);
+    if (H2) {
+      *H2 = -I_3x3;
+    }
+    return prediction - foothold;
+  }
+
+ private:
+  Point3 measurement_;
+};
+
 /// Height factor on a standalone foothold point variable.
 class PointHeightFactor : public NoiseModelFactorN<Point3> {
   using Base = NoiseModelFactorN<Point3>;

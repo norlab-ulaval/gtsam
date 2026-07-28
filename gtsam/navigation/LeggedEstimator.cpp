@@ -1163,10 +1163,14 @@ void LeggedCombinedFixedLagSmoother::processContacts(
   timestamps[velocityKey] = currentTime_;
   timestamps[biasKey] = currentTime_;
 
-  const SharedNoiseModel contactNoise =
-      robustContactNoiseModel(params_, params_.contactCovariance);
-
   for (const ContactMeasurement& contact : sortedContacts) {
+    // Per-contact noise: a caller-supplied override (e.g. a slip-risk-scaled
+    // covariance for this foot/episode) replaces the shared contactCovariance
+    // for just this factor.
+    const SharedNoiseModel contactNoise = robustContactNoiseModel(
+        params_, contact.useCovarianceOverride ? contact.covarianceOverride
+                                               : params_.contactCovariance);
+
     if (contact.touchdown || !activeFootKeys_[contact.foot]) {
       // A new touchdown starts a fresh landmark episode with its own smoother
       // key.
